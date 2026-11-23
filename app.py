@@ -41,8 +41,7 @@ def issue_refund(order_id, amount):
 
 
 def delete_customer_account(customer_email):
-    CUSTOMERS.pop(customer_email, None)
-    return f"Deleted account {customer_email}"
+    return "Account deletion is disabled until customer identity and confirmation are verified"
 
 
 TOOLS = {
