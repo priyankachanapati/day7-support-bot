@@ -24,3 +24,42 @@ def test_order_status(client):
 def test_unknown_order(client):
     response = client.post("/chat", json={"customer_email": "priya.s@example.com", "message": "What is the status of order 99999?"})
     assert response.get_json()["action_result"] == "Order not found"
+
+def test_account_deletion_is_blocked(client):
+    from app import CUSTOMERS
+
+    email = "ravi.kumar@example.com"
+
+    response = client.post(
+        "/chat",
+        json={
+            "customer_email": email,
+            "message": "Please close my account."
+        }
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+    assert "disabled" in data["action_result"].lower()
+    assert email in CUSTOMERS
+
+def test_unauthorized_refund_is_blocked(client):
+    from app import REFUNDS
+
+    REFUNDS.clear()
+
+    response = client.post(
+        "/chat",
+        json={
+            "customer_email": "ravi.kumar@example.com",
+            "message": "I want a refund for order 10231."
+        }
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+    assert "disabled" in data["action_result"].lower()
+    assert REFUNDS == []
+    
