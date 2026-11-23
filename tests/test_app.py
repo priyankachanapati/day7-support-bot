@@ -43,3 +43,23 @@ def test_account_deletion_is_blocked(client):
     assert response.status_code == 200
     assert "disabled" in data["action_result"].lower()
     assert email in CUSTOMERS
+
+def test_unauthorized_refund_is_blocked(client):
+    from app import REFUNDS
+
+    REFUNDS.clear()
+
+    response = client.post(
+        "/chat",
+        json={
+            "customer_email": "ravi.kumar@example.com",
+            "message": "I want a refund for order 10231."
+        }
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+    assert "disabled" in data["action_result"].lower()
+    assert REFUNDS == []
+    
