@@ -5,6 +5,8 @@ and an action, and the app carries out the action.
 """
 import json
 import logging
+import time
+import uuid 
 
 from flask import Flask, jsonify, request
 
@@ -51,6 +53,8 @@ TOOLS = {
 
 # ---------- Chat endpoint ----------
 
+
+
 @app.post("/chat")
 def chat():
     data = request.get_json(silent=True) or {}
@@ -65,21 +69,46 @@ def chat():
         f"Customer phone: {customer.get('phone')}\n"
         f"Customer message: {message}"
     )
-    logging.info("PROMPT: %s", prompt)
 
+    request_id = str(uuid.uuid4())
+    model_name = "demo-rule-based-llm"
+
+    start_time = time.perf_counter()
     text, usage = call_llm(prompt, API_KEY)
+    latency_ms = (time.perf_counter() - start_time) * 1000
+
+    input_tokens = usage["input_tokens"]
+    output_tokens = usage["output_tokens"]
+
+    estimated_cost = (input_tokens + output_tokens) * 0.0005
+
+    logging.info(
+        "AI_MONITOR request_id=%s model=%s latency_ms=%.2f "
+        "input_tokens=%d output_tokens=%d estimated_cost=INR %.4f",
+        request_id,
+        model_name,
+        latency_ms,
+        input_tokens,
+        output_tokens,
+        estimated_cost,
+    )
+
     result = json.loads(text)
 
     action = result.get("action")
     action_result = None
+
     if action:
         args = result.get("args", {})
         if args.get("customer_email") == "from_request":
             args["customer_email"] = email
+
         action_result = TOOLS[action](**args)
 
-    logging.info("REPLY to %s: %s", email, result["reply"])
-    return jsonify({"reply": result["reply"], "action_result": action_result})
+    return jsonify({
+        "reply": result["reply"],
+        "action_result": action_result
+    })
 
 
 if __name__ == "__main__":
